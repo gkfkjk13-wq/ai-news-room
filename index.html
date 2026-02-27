@@ -1,0 +1,695 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI NEWS ROOM — Professional Edition</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+  <!-- INTRO ANIMATION -->
+  <div id="intro">
+    <div class="intro-bg-glow"></div>
+    <div class="intro-scanline"></div>
+    <div class="intro-line"></div>
+    <div style="position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;">
+      <div class="intro-word">AI NEWS ROOM</div>
+      <div class="intro-word fill">AI NEWS ROOM</div>
+      <div class="intro-sub">Professional Intelligence Edition · v2.0</div>
+    </div>
+    <div class="intro-bar"></div>
+  </div>
+
+  <!-- API KEY MODAL -->
+  <div id="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">API 키 설정</div>
+      <div class="modal-sub">Google Gemini API 키를 입력하여 AI 뉴스 생성 엔진을 활성화합니다.</div>
+      <input type="password" class="modal-input" id="api-key-input" placeholder="AIza...">
+      <div class="modal-hint">
+        키는 브라우저 세션에만 저장되며 외부로 전송되지 않습니다.<br>
+        <a href="https://aistudio.google.com/apikey" target="_blank">🔗 Google AI Studio에서 무료 발급</a>
+      </div>
+      <button class="btn-start" onclick="saveApiKey()" style="font-size:12px; padding:12px;">
+        <span>⚡ 엔진 활성화</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <!-- SIDEBAR -->
+    <nav id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">⚡</div>
+        <div class="logo-title">AI NEWS ROOM</div>
+        <div class="logo-sub">Professional Edition</div>
+      </div>
+      <div class="sidebar-label">Work Pipeline</div>
+      <div class="nav-item active" id="nav-0" onclick="goPage(0)">
+        <div class="nav-icon">🔍</div>
+        <div class="nav-text">자료수집</div>
+        <div class="nav-num" id="badge-0">1</div>
+      </div>
+      <div class="nav-item" id="nav-1" onclick="goPage(1)">
+        <div class="nav-icon">⚙️</div>
+        <div class="nav-text">데이터정리</div>
+        <div class="nav-num" id="badge-1">2</div>
+      </div>
+      <div class="nav-item" id="nav-2" onclick="goPage(2)">
+        <div class="nav-icon">✍️</div>
+        <div class="nav-text">기사작성</div>
+        <div class="nav-num" id="badge-2">3</div>
+      </div>
+      <div class="nav-item" id="nav-3" onclick="goPage(3)">
+        <div class="nav-icon">🎨</div>
+        <div class="nav-text">이미지·TTS</div>
+        <div class="nav-num" id="badge-3">4</div>
+      </div>
+      <div class="nav-item" id="nav-4" onclick="goPage(4)">
+        <div class="nav-icon">📄</div>
+        <div class="nav-text">기사미리보기</div>
+        <div class="nav-num" id="badge-4">5</div>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="api-status">
+          <div class="api-dot idle" id="api-dot"></div>
+          <span id="api-status-text">API 대기중</span>
+        </div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button onclick="openModal()"
+            style="flex:1; padding:6px 0; background:var(--bg4); border:1px solid var(--border); border-radius:5px; color:var(--text3); font-size:11px; cursor:pointer; font-family:var(--font-mono);"
+            id="key-btn">🔑 키 설정</button>
+          <button onclick="resetAll()"
+            style="flex:1; padding:6px 0; background:var(--bg4); border:1px solid var(--border); border-radius:5px; color:var(--text3); font-size:11px; cursor:pointer; font-family:var(--font-mono);">🔄
+            초기화</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <div id="main">
+
+      <!-- PAGE 0: 자료수집 -->
+      <div class="page active" id="page-0">
+        <div class="main-header">
+          <div class="main-header-row">
+            <div>
+              <div class="phase-label">
+                <div class="phase-line"></div>Research Phase
+              </div>
+              <div class="page-title">자료수집</div>
+              <div class="page-desc">실시간 웹 데이터를 수집하여 통찰력을 확보합니다.</div>
+            </div>
+            <button class="btn-next" onclick="startResearch()">
+              <span>⚡ INTEL RESEARCH 시작</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="main-scroll">
+          <div class="panel">
+            <div class="panel-title">Select Target Region</div>
+            <div class="region-grid">
+              <div class="region-btn active" onclick="selectRegion(this,'KR')"><span class="flag">KR</span> 한국 (KR)
+              </div>
+              <div class="region-btn" onclick="selectRegion(this,'US')"><span class="flag">US</span> 미국 (US)</div>
+              <div class="region-btn" onclick="selectRegion(this,'GB')"><span class="flag">GB</span> 영국 (GB)</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Intelligence Target Category</div>
+            <div class="cat-grid">
+              <div class="cat-btn" onclick="toggleCat(this,'정치')">
+                <div class="icon">🏛️</div>정치
+              </div>
+              <div class="cat-btn active" onclick="toggleCat(this,'경제')">
+                <div class="icon">📈</div>경제
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'사회')">
+                <div class="icon">👥</div>사회
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'IT/과학')">
+                <div class="icon">🔬</div>IT/과학
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'생활/문화')">
+                <div class="icon">🌿</div>생활/문화
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'세계')">
+                <div class="icon">🌐</div>세계
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'연예/예술')">
+                <div class="icon">🎭</div>연예/예술
+              </div>
+              <div class="cat-btn" onclick="toggleCat(this,'스포츠')">
+                <div class="icon">🏆</div>스포츠
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Core Search Topic</div>
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="topic-input" placeholder="예: 2026년 반도체 시장 전망" />
+            </div>
+            <div class="tip">
+              <span class="tip-icon">💡</span>
+              <span>구체적인 토픽을 입력할수록 더 정확한 기사를 생성합니다. 비워두면 선택한 카테고리의 최신 이슈를 자동 수집합니다.</span>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Research Settings</div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="flex:1; font-size:12px; color:var(--text2);">최대 <strong
+                  style="color:var(--teal);">10건</strong>의 최신 기사를 수집합니다. 수집 후 사용할 기사를 직접 선택할 수 있습니다.</div>
+            </div>
+          </div>
+
+          <!-- 수집 진행 상황 -->
+          <div class="panel" id="research-progress-panel" style="display:none;">
+            <div class="panel-title">Research Progress</div>
+            <div class="progress-label">
+              <span id="progress-text">대기중...</span>
+              <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+            <div class="log-box" id="log-box"></div>
+          </div>
+
+          <!-- 수집 결과 + 선택 -->
+          <div class="panel" id="collected-results-panel" style="display:none;">
+            <div class="panel-title">수집된 기사 — 사용할 기사를 선택하세요 (최대 10건)</div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+              <button class="toolbar-btn" onclick="selectAllArticles()">✅ 전체 선택</button>
+              <button class="toolbar-btn" onclick="deselectAllArticles()">❌ 전체 해제</button>
+              <span id="selected-count-badge" class="token-badge" style="margin-left:auto;">0건 선택됨</span>
+            </div>
+            <div class="results-grid" id="collected-articles-grid"></div>
+            <button class="btn-start" onclick="sendToDataProcessing()" id="send-btn" style="margin-top:14px;">
+              <span>📤 선택한 기사를 데이터정리로 보내기</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAGE 1: 데이터정리 -->
+      <div class="page" id="page-1">
+        <div class="main-header">
+          <div class="main-header-row">
+            <div>
+              <div class="phase-label">
+                <div class="phase-line"></div>Data Processing Phase
+              </div>
+              <div class="page-title">데이터정리</div>
+              <div class="page-desc">선택된 기사의 전문을 검토하고 기사 작성에 활용합니다.</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-next" onclick="goPage(0)"
+                style="border-color:var(--text3); color:var(--text3);"><span>← 자료수집</span></button>
+              <button class="btn-next" onclick="goToArticleWriting()" id="go-write-btn"><span>✍️ 기사작성으로
+                  →</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="main-scroll" id="data-scroll">
+          <div class="panel">
+            <div class="panel-title">선택된 기사 요약</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px;">
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="data-article-count">0</div>
+                <div style="font-size:11px; color:var(--text3);">선택된 기사</div>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="data-total-chars">0</div>
+                <div style="font-size:11px; color:var(--text3);">총 수집 글자수</div>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="data-sources-count">0</div>
+                <div style="font-size:11px; color:var(--text3);">출처 수</div>
+              </div>
+            </div>
+            <!-- 데이터 분석 시작 버튼 -->
+            <button class="btn-start" onclick="runDataAnalysis()" id="analyze-btn" style="margin-top:4px;">
+              <span>🧠 AI 다각도 분석 시작</span>
+            </button>
+          </div>
+
+          <!-- 선택된 기사 상세 -->
+          <div id="selected-articles-detail"></div>
+
+          <!-- 분석 진행 상황 -->
+          <div class="panel" id="analysis-progress-panel" style="display:none;">
+            <div class="panel-title">Analysis Progress</div>
+            <div class="progress-label">
+              <span id="analysis-progress-text">분석 대기중...</span>
+              <span id="analysis-progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" id="analysis-progress-bar"></div>
+            </div>
+            <div class="log-box" id="analysis-log-box" style="height:120px;"></div>
+          </div>
+
+          <!-- 1. 통합 요약 -->
+          <div class="panel" id="analysis-summary-panel" style="display:none;">
+            <div class="panel-title">📋 통합 요약 — Integrated Summary</div>
+            <div id="analysis-summary"
+              style="font-size:13px; color:var(--text); line-height:1.8; background:var(--bg4); border-radius:8px; padding:16px; border-left:3px solid var(--teal);">
+            </div>
+          </div>
+
+          <!-- 2. 카테고리별 팩트 분류 -->
+          <div class="panel" id="analysis-facts-panel" style="display:none;">
+            <div class="panel-title">📊 카테고리별 팩트 분류 — Categorized Facts</div>
+            <div id="analysis-facts" style="display:flex; flex-direction:column; gap:12px;"></div>
+          </div>
+
+          <!-- 3. 관점 및 시사점 -->
+          <div class="panel" id="analysis-perspectives-panel" style="display:none;">
+            <div class="panel-title">🔍 관점 및 시사점 — Perspectives & Implications</div>
+            <div id="analysis-perspectives"
+              style="font-size:13px; color:var(--text); line-height:1.8; background:var(--bg4); border-radius:8px; padding:16px;">
+            </div>
+          </div>
+
+          <!-- 4. 스토리라인 & 논조 -->
+          <div class="panel" id="analysis-storyline-panel" style="display:none;">
+            <div class="panel-title">📐 스토리라인 & 논조 — Storyline & Tone</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div style="background:var(--bg4); border-radius:8px; padding:14px;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--teal); letter-spacing:0.2em; margin-bottom:8px;">
+                  SUGGESTED TONE</div>
+                <div id="analysis-tone" style="font-size:16px; font-weight:700; color:var(--text);"></div>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:14px;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--teal); letter-spacing:0.2em; margin-bottom:8px;">
+                  NARRATIVE ARC</div>
+                <div id="analysis-arc" style="font-size:16px; font-weight:700; color:var(--text);"></div>
+              </div>
+            </div>
+            <div id="analysis-storyline"
+              style="font-size:13px; color:var(--text2); line-height:1.8; background:var(--bg4); border-radius:8px; padding:16px; border-left:3px solid var(--yellow);">
+            </div>
+          </div>
+
+          <!-- 5. 교차 검증 -->
+          <div class="panel" id="analysis-factcheck-panel" style="display:none;">
+            <div class="panel-title">✅ 교차 검증 — Cross Validation</div>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+              <div style="background:var(--bg4); border-radius:8px; padding:12px 20px; text-align:center;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); letter-spacing:0.2em; margin-bottom:4px;">
+                  CONFIDENCE</div>
+                <div id="factcheck-score" style="font-size:28px; font-weight:700; color:var(--green);">—</div>
+              </div>
+              <div id="factcheck-status" style="flex:1; font-size:12px; color:var(--text2); line-height:1.6;"></div>
+            </div>
+            <div id="analysis-factcheck"
+              style="font-size:12px; color:var(--text2); line-height:1.7; background:var(--bg4); border-radius:8px; padding:14px;">
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAGE 2: 기사작성 -->
+      <div class="page" id="page-2">
+        <div class="main-header">
+          <div class="main-header-row">
+            <div>
+              <div class="phase-label">
+                <div class="phase-line"></div>Article Generation Phase
+              </div>
+              <div class="page-title">기사작성</div>
+              <div class="page-desc">AI가 선택한 소스를 기반으로 전문 기사를 작성합니다.</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-next" id="generate-btn" onclick="generateArticle()"><span>✍️ 기사 생성</span></button>
+              <button class="btn-next" id="goto-image-btn" onclick="goToImageGen()"
+                style="opacity:0.4; cursor:not-allowed; border-color:var(--purple,#9b59b6); color:var(--purple,#9b59b6);"
+                disabled><span>🎨 이미지생성 →</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="main-scroll">
+
+          <!-- 불러온 기사 목록 (자료수집→데이터정리에서 이어진 기사) -->
+          <div class="panel" id="write-sources-panel" style="display:none;">
+            <div class="panel-title" style="display:flex; align-items:center; justify-content:space-between;">
+              <span>📂 참조 기사 목록 — 데이터정리에서 불러온 기사</span>
+              <span id="write-sources-count" class="token-badge">0건</span>
+            </div>
+            <div id="write-sources-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Article Style</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <div class="region-btn active" onclick="selectStyle(this,'객관적 보도')">📰 객관적 보도</div>
+              <div class="region-btn" onclick="selectStyle(this,'심층 분석')">🔬 심층 분석</div>
+              <div class="region-btn" onclick="selectStyle(this,'오피니언')">💭 오피니언</div>
+              <div class="region-btn" onclick="selectStyle(this,'브리핑')">⚡ 브리핑</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Output Language</div>
+            <div style="display:flex; gap:10px;">
+              <div class="region-btn active" onclick="selectLang(this,'ko')">🇰🇷 한국어</div>
+              <div class="region-btn" onclick="selectLang(this,'en')">🇺🇸 영어</div>
+            </div>
+          </div>
+          <div class="article-editor">
+            <div class="editor-toolbar">
+              <span
+                style="font-family:var(--font-mono); font-size:10px; color:var(--text3); letter-spacing:0.2em; text-transform:uppercase; flex:1;">Generated
+                Article</span>
+              <span id="word-count" class="token-badge">0 단어</span>
+              <button class="toolbar-btn" onclick="copyArticle()">📋 복사</button>
+              <button class="toolbar-btn" onclick="downloadArticle()">⬇️ 저장</button>
+            </div>
+            <textarea class="editor-textarea" id="article-textarea"
+              placeholder="기사 생성 버튼을 클릭하거나, 직접 내용을 입력·편집하세요..."></textarea>
+          </div>
+
+          <!-- 기사 생성 완료 후 이미지 생성 안내 배너 -->
+          <div id="article-done-banner"
+            style="display:none; margin-top:14px; padding:18px 22px; background:linear-gradient(135deg,rgba(91,53,209,0.18),rgba(61,31,158,0.18)); border:1.5px solid rgba(155,89,182,0.5); border-radius:12px; display:none; align-items:center; gap:16px;">
+            <div style="font-size:32px;">🎉</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">기사 작성 완료!</div>
+              <div style="font-size:12px; color:var(--text2);">이미지를 생성하여 기사를 더욱 풍성하게 만들어보세요.</div>
+            </div>
+            <button onclick="goToImageGen()"
+              style="padding:10px 22px; background:linear-gradient(135deg,#5c35d1,#3d1f9e); border:none; border-radius:8px; color:#fff; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">🎨
+              이미지 생성하기 →</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- PAGE 3: 이미지생성 -->
+      <div class="page" id="page-3">
+        <div class="main-header">
+          <div class="main-header-row">
+            <div>
+              <div class="phase-label">
+                <div class="phase-line"></div>Media Generation Phase
+              </div>
+              <div class="page-title">이미지생성</div>
+              <div class="page-desc">Imagen 3.0으로 기사에 최적화된 대표 이미지를 생성합니다.</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-next" onclick="goPage(2)"
+                style="border-color:var(--text3); color:var(--text3);"><span>← 기사작성</span></button>
+              <button class="btn-next" onclick="goToPreview()" id="goto-preview-btn"
+                style="background:linear-gradient(135deg,rgba(46,213,115,0.15),rgba(0,168,120,0.15)); border-color:var(--green);"><span>📄
+                  미리보기 →</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="main-scroll">
+
+          <!-- 기사에서 불러온 내용 표시 -->
+          <div class="panel" id="img-article-info" style="display:none;">
+            <div class="panel-title">📰 기사 정보 — 이미지 생성 기반</div>
+            <div id="img-article-preview"
+              style="font-size:12px; color:var(--text2); line-height:1.7; background:var(--bg4); border-radius:8px; padding:14px; border-left:3px solid var(--teal); max-height:120px; overflow-y:auto;">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;" id="img-source-tags"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">Image Style</div>
+            <div class="style-grid">
+              <div class="style-btn active" onclick="selectImgStyle(this,'Photorealistic')">📷 Photorealistic</div>
+              <div class="style-btn" onclick="selectImgStyle(this,'Cinematic')">🎬 Cinematic</div>
+              <div class="style-btn" onclick="selectImgStyle(this,'Editorial')">📰 Editorial</div>
+              <div class="style-btn" onclick="selectImgStyle(this,'Infographic')">📊 Infographic</div>
+              <div class="style-btn" onclick="selectImgStyle(this,'Documentary')">🎥 Documentary</div>
+              <div class="style-btn" onclick="selectImgStyle(this,'Minimalist')">⬜ Minimalist</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Image Prompt (영어)</div>
+            <div class="search-box" style="margin-bottom:12px;">
+              <textarea id="img-prompt"
+                style="flex:1; background:none; border:none; outline:none; color:var(--text); font-size:13px; font-family:var(--font-mono); resize:none; min-height:60px;"
+                placeholder="AI가 기사 내용을 기반으로 자동 생성하거나, 직접 입력하세요..."></textarea>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-start" onclick="autoGenPrompt()" style="flex:1; font-size:11px; padding:10px;"><span>🤖
+                  프롬프트 자동 생성</span></button>
+              <button class="btn-start" onclick="generateImage()"
+                style="flex:1; font-size:11px; padding:10px; background:linear-gradient(135deg,#5c35d1,#3d1f9e);"><span>🎨
+                  이미지 생성</span></button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Generated Image</div>
+            <div class="image-preview" id="image-preview">
+              <div class="image-placeholder">
+                <div class="big-icon">🖼️</div>
+                <p>이미지를 생성하면 여기에 표시됩니다</p>
+                <p style="font-size:11px; margin-top:6px; color:var(--text3)">Gemini Flash Image Generation</p>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+              <button class="toolbar-btn" id="save-img-btn" onclick="saveImage()" style="flex:1; padding:9px;"
+                disabled>⬇️ 이미지 저장</button>
+              <button class="toolbar-btn" onclick="generateImage()" style="flex:1; padding:9px;">🔄 재생성</button>
+            </div>
+            <!-- 이미지 생성 후 미리보기 이동 배너 -->
+            <div id="image-done-banner"
+              style="display:none; margin-top:14px; padding:16px 20px; background:linear-gradient(135deg,rgba(46,213,115,0.15),rgba(0,100,80,0.15)); border:1.5px solid rgba(46,213,115,0.4); border-radius:12px; align-items:center; gap:14px;">
+              <div style="font-size:28px;">✅</div>
+              <div style="flex:1;">
+                <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px;">이미지 생성 완료!</div>
+                <div style="font-size:11px; color:var(--text2);">미리보기에서 기사, 이미지를 한눈에 확인하세요.</div>
+              </div>
+              <button onclick="goToPreview()"
+                style="padding:9px 18px; background:linear-gradient(135deg,#00c87a,#009b60); border:none; border-radius:8px; color:#000; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">📄
+                미리보기 →</button>
+            </div>
+          </div>
+          <!-- TTS 패널 - Web Speech API 기반 -->
+          <div class="panel" id="tts-panel">
+            <div class="panel-title">🔊 TTS — 기사 낭독 오디오</div>
+
+            <!-- 상태 표시 -->
+            <div id="tts-status-bar"
+              style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg4); border-radius:8px; margin-bottom:14px; border-left:3px solid var(--teal);">
+              <div id="tts-status-icon" style="font-size:20px;">🎙️</div>
+              <div style="flex:1;">
+                <div id="tts-status-text" style="font-size:12px; font-weight:700; color:var(--text);">오디오 생성 대기 중</div>
+                <div id="tts-status-sub" style="font-size:10px; color:var(--text3); margin-top:2px;">브라우저 내장 TTS · API 키
+                  불필요 · 한국어 지원</div>
+              </div>
+              <div id="tts-time-display" style="font-family:var(--font-mono); font-size:11px; color:var(--teal);">0:00 /
+                0:00</div>
+            </div>
+
+            <!-- 설정 행 -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+              <div style="background:var(--bg4); border-radius:8px; padding:12px;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); letter-spacing:0.2em; margin-bottom:8px;">
+                  VOICE</div>
+                <select id="tts-voice-select"
+                  style="width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:5px; color:var(--text); font-size:11px; padding:5px 8px; font-family:var(--font-mono); cursor:pointer;">
+                  <option value="">🔄 로딩 중...</option>
+                </select>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:12px;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); letter-spacing:0.2em; margin-bottom:8px;">
+                  SPEED — <span id="tts-rate-val">1.0</span>x</div>
+                <input type="range" id="tts-rate" min="0.5" max="2" step="0.1" value="1.0"
+                  style="width:100%; accent-color:var(--teal); cursor:pointer;"
+                  oninput="document.getElementById('tts-rate-val').textContent=parseFloat(this.value).toFixed(1)">
+              </div>
+            </div>
+
+            <!-- 진행바 -->
+            <div id="tts-progress-wrap" style="display:none; margin-bottom:12px;">
+              <div
+                style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:9px; color:var(--text3); margin-bottom:6px;">
+                <span id="tts-progress-label">읽는 중...</span>
+                <span id="tts-progress-pct">0%</span>
+              </div>
+              <div style="background:var(--bg4); border-radius:100px; height:5px; overflow:hidden;">
+                <div id="tts-progress-bar"
+                  style="height:100%; background:linear-gradient(90deg,var(--teal-dark),var(--teal)); border-radius:100px; width:0%; transition:width 0.3s;">
+                </div>
+              </div>
+            </div>
+
+            <!-- 컨트롤 버튼 -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn-start" onclick="generateTTS()" id="tts-gen-btn"
+                style="flex:2; min-width:120px; font-size:11px; padding:11px;">
+                <span>🎙️ TTS 생성 · 재생</span>
+              </button>
+              <button onclick="ttsStop()" id="tts-stop-btn"
+                style="flex:1; min-width:80px; padding:11px; background:var(--bg4); border:1px solid var(--border); border-radius:10px; color:var(--text2); font-size:12px; cursor:pointer; transition:all 0.2s; font-family:var(--font-mono); letter-spacing:0.1em;"
+                disabled>⏹ 정지</button>
+              <button onclick="ttsSaveMp3()" id="tts-save-btn"
+                style="flex:1; min-width:80px; padding:11px; background:var(--bg4); border:1px solid var(--border); border-radius:10px; color:var(--text2); font-size:12px; cursor:pointer; transition:all 0.2s; font-family:var(--font-mono); letter-spacing:0.1em;"
+                disabled>💾 저장</button>
+            </div>
+
+            <!-- 기사 텍스트 미리보기 -->
+            <div id="tts-text-preview"
+              style="display:none; margin-top:14px; background:var(--bg4); border-radius:8px; padding:14px; font-size:11px; color:var(--text2); line-height:1.9; max-height:120px; overflow-y:auto; border-left:3px solid var(--yellow);">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE 4: 미리보기 (신문지 스타일) -->
+      <div class="page" id="page-4">
+        <div class="main-header">
+          <div class="main-header-row">
+            <div>
+              <div class="phase-label">
+                <div class="phase-line"></div>Preview Phase
+              </div>
+              <div class="page-title">기사미리보기</div>
+              <div class="page-desc">완성된 기사·이미지·출처를 한눈에 확인합니다.</div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-next" onclick="goPage(3)"
+                style="border-color:var(--text3); color:var(--text3);"><span>← 이미지/TTS</span></button>
+              <button class="btn-next" onclick="saveAllBundle()"
+                style="background:linear-gradient(135deg,rgba(46,213,115,0.2),rgba(0,168,120,0.2)); border-color:var(--green);"><span>📦
+                  전체 저장</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="main-scroll">
+          <div class="newspaper-wrap" id="newspaper-preview">
+            <div class="np-header">
+              <div class="np-masthead">AI NEWS ROOM</div>
+              <div class="np-dateline">
+                <span id="np-region">KOREA EDITION</span>
+                <span id="np-date">2026.02.24</span>
+                <span id="np-cat">ECONOMY</span>
+              </div>
+            </div>
+            <div class="np-rule-thick"></div>
+            <div class="np-headline" id="np-headline">기사 제목이 여기에 표시됩니다</div>
+            <div class="np-subhead" id="np-subhead"></div>
+            <div class="np-byline" id="np-byline">AI NEWS ROOM · Professional Edition</div>
+            <div class="np-rule-double"></div>
+            <div class="np-image-frame" id="np-image-frame" style="display:none;">
+              <img id="np-image" src="" alt="Article Image" />
+              <div class="np-caption" id="np-caption">AI Generated Image — Imagen 3.0</div>
+            </div>
+            <div class="np-body" id="np-body">
+              <p>기사 작성 단계에서 기사를 생성하면 이 영역에 신문지 형태로 표시됩니다.</p>
+            </div>
+            <div class="np-rule-thin"></div>
+            <div class="np-footer">AI NEWS ROOM &mdash; Professional Intelligence Edition &mdash; Powered by Gemini
+            </div>
+          </div>
+          <div class="panel" style="margin-top:18px;">
+            <div class="panel-title">💾 모든 결과물 저장</div>
+            <div class="save-grid">
+              <button class="save-btn" onclick="exportArticle()"><span class="save-icon">📰</span>
+                <div>
+                  <div>기사 HTML 저장</div>
+                  <div style="font-size:9px; color:var(--text3); margin-top:2px;">신문지 레이아웃 포함</div>
+                </div>
+              </button>
+              <button class="save-btn" onclick="downloadArticle()"><span class="save-icon">📝</span>
+                <div>
+                  <div>기사 텍스트 저장</div>
+                  <div style="font-size:9px; color:var(--text3); margin-top:2px;">.txt 파일</div>
+                </div>
+              </button>
+              <button class="save-btn" onclick="saveImage()" id="save-img-btn2"><span class="save-icon">🖼️</span>
+                <div>
+                  <div>이미지 저장</div>
+                  <div style="font-size:9px; color:var(--text3); margin-top:2px;">AI 생성 이미지 PNG</div>
+                </div>
+              </button>
+              <button class="save-btn" onclick="saveTTSAudio()" id="save-tts-btn"><span class="save-icon">🎙️</span>
+                <div>
+                  <div>TTS 오디오 저장</div>
+                  <div style="font-size:9px; color:var(--text3); margin-top:2px;">.wav 오디오 파일</div>
+                </div>
+              </button>
+            </div>
+            <button class="btn-start" onclick="saveAllBundle()" style="margin-top:12px;"><span>📦 전체 결과물 일괄
+                저장</span></button>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Article Metadata</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); margin-bottom:6px; letter-spacing:0.2em;">
+                  WORD COUNT</div>
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="meta-words">0</div>
+                <div style="font-size:11px; color:var(--text3);">단어</div>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); margin-bottom:6px; letter-spacing:0.2em;">
+                  SOURCES</div>
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="meta-sources">0</div>
+                <div style="font-size:11px; color:var(--text3);">참조 기사</div>
+              </div>
+              <div style="background:var(--bg4); border-radius:8px; padding:12px; text-align:center;">
+                <div
+                  style="font-family:var(--font-mono); font-size:9px; color:var(--text3); margin-bottom:6px; letter-spacing:0.2em;">
+                  IMAGE</div>
+                <div style="font-size:22px; font-weight:700; color:var(--teal);" id="meta-has-image">—</div>
+                <div style="font-size:11px; color:var(--text3);">생성됨</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 출처 기사 목록 패널 -->
+          <div class="panel" id="preview-sources-panel" style="display:none; margin-top:18px;">
+            <div class="panel-title" style="display:flex; align-items:center; justify-content:space-between;">
+              <span>📚 참조 출처 기사 목록</span>
+              <span id="preview-sources-count" class="token-badge">0건</span>
+            </div>
+            <div id="preview-sources-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div id="statusbar">
+        <div class="status-item">📡 수집된 기사 <span class="val" id="sb-count">0</span>건</div>
+        <div class="status-sep"></div>
+        <div class="status-item">🌏 지역 <span class="val" id="sb-region">KR</span></div>
+        <div class="status-sep"></div>
+        <div class="status-item">📂 카테고리 <span class="val" id="sb-cat">경제</span></div>
+        <div class="status-sep"></div>
+        <div class="status-item" id="sb-status">⏳ 대기중</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
