@@ -1485,8 +1485,8 @@ RECOMMENDATIONS: ${ar.factcheck?.recommendation || ''}
   };
 
   const todayStr = getTodayStr();
-  const userPress = document.getElementById('press-input')?.value.trim() || '동아일보';
-  const userAuthor = document.getElementById('author-input')?.value.trim() || '';
+  const userPress = '동아일보';
+  const userAuthor = '';
 
   const prompt = `You are an elite investigative journalist for a ${regionCfg.name} news agency.
 Today is ${todayStr}. All news must be written with today's perspective.
@@ -1503,7 +1503,7 @@ ${styleMap[state.articleStyle] || 'objective news'}
 - **"PAST vs. PRESENT" BRIDGE**: Use storytelling techniques to explain "how it started (Past)" and "how it progressed to today (Latest)". Ensure a logical causal link between them.
 - **LENGTH & DEPTH**: ${lengthInstr[state.articleStyle] || 'Provide a comprehensive article with sufficient length.'}
 - **NO HEADERS**: Do NOT use any Markdown symbols like '#' or '##' at the beginning of lines. Strictly use plain text for the title and subtitle.
-- **BYLINE FORMAT**: Strictly use the format: "${userPress} : ${userAuthor} 기자" on the third line. Do NOT use "By [Name]" or "바이라인:".
+- **NO BYLINE**: Do NOT include any reporter name, press name, or date lines in the content.
 
 [STRICT INSTRUCTIONS]:
 1. SOURCE ADHERENCE: Use ONLY the provided sources. Use 'past context' for background and 'latest news' for recent developments.
@@ -1514,7 +1514,6 @@ ${styleMap[state.articleStyle] || 'objective news'}
 [FORMATTING SYSTEM]:
 - [Headline: Directly as the first line]
 - [Sub-headline: Directly as the second line]
-- ${userPress} : ${userAuthor} 기자
 - [Full Article Content: Merging Past and Present into a single cohesive story]
 
 ${langInstr}
