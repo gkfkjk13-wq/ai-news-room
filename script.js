@@ -900,7 +900,6 @@ function renderChronicleArticles(articles) {
 
     card.innerHTML = '<div style="flex:1;min-width:0;">' +
       '<div class="card-source">' + a.source +
-      '<span class="card-badge">' + a.date + '</span>' +
       aBadge + cBadge +
       '</div>' +
       '<div class="card-title">' + a.title + '</div>' +
@@ -1178,7 +1177,7 @@ async function runDataAnalysis() {
     setAnalysisProgress(100, '분석 완료!');
     addAnalysisLog('ok', '✅ 교차 검증 완료 — 신뢰도: ' + factCheckResult.confidence);
 
-    // 분석 결과를 state에 저장 (기사 작성 시 활용)
+    // 분석 결과를 state에 저장 (기사 작성 시 활용) - 이미 organizeData에서 세척됨
     state.analysisResult = {
       summary: organizeResult.summary,
       perspectives: organizeResult.perspectives,
@@ -1189,7 +1188,11 @@ async function runDataAnalysis() {
     if (state.chronicleArticles && state.chronicleArticles.length > 0) {
       setAnalysisProgress(90, 'Step 3/3: 크로니클-현재 인과관계 연결 중...');
       addAnalysisLog('info', '✅ Step 3: 크로니클과 현재 기사의 맥락적 서사 연결 (NewsService)');
-      const linkResult = await NewsService.linkContexts(state.latestNews, state.chronicleArticles);
+      const linkResultRaw = await NewsService.linkContexts(state.latestNews, state.chronicleArticles);
+      const linkResult = linkResultRaw
+        .replace(/^#+\s*/gm, '')
+        .replace(/^By\s+.*$/gim, '')
+        .trim();
       state.analysisResult.perspectives += '\n\n**[크로니클 서사 연결 분석]**\n' + linkResult;
       addAnalysisLog('ok', '✅ 크로니클 기반 서사 브릿지 문장 생성 완료');
     }
@@ -1233,8 +1236,9 @@ IMPORTANT: DO NOT include markdown code blocks (like \` \` \`json) in the respon
 
     2. "perspectives"(string): 템포럴 트렌드와 역사적 맥락에 기반한 시사점 및 미래 전망 (150-200자 내외). 지금까지의 사건 궤적을 토대로 앞으로 어떤 일이 벌어질지 예측해줘.
 
-    3. "timeline"(array of objects): 핵심 사건들에 대한 구조화된 연표.
-       - "date"(string): "YYYY.MM.DD" 형식.
+    3. "timeline"(array of objects): 제공된 ${state.selectedArticlesData.length}개의 기사 각각에 대응하는 핵심 사건 연표. 
+       **반드시 기사 개수와 동일하게 정확히 ${state.selectedArticlesData.length}개의 항목을 생성해.**
+       - "date"(string): 기사의 날짜인 "YYYY.MM.DD" 형식.
        - "event"(string): 짧고 임팩트 있는 사건명.
        - "details"(string): 2-3문장 정도의 상세 설명.
        - "link"(string): 이 사건이 현재 상황에 미친 직접적인 영향에 대한 분석.
@@ -1262,8 +1266,12 @@ IMPORTANT: DO NOT include markdown code blocks (like \` \` \`json) in the respon
     result.timeline = [];
   }
 
-  // UI 렌더링: 통합 요약 (코드 형식 기호 제거)
-  const cleanSummary = (result.summary || '').replace(/[`]/g, '').trim();
+  // UI 렌더링: 통합 요약 (코드 형식 기호 및 마크다운 헤더 제거)
+  const cleanSummary = (result.summary || '')
+    .replace(/[`]/g, '')
+    .replace(/^#+\s*/gm, '') // 줄 시작의 # 모두 제거
+    .replace(/^By\s+.*$/gim, '') // "By ..." 형식 제거
+    .trim();
   const summaryEl = document.getElementById('analysis-summary');
   if (summaryEl) {
     summaryEl.innerHTML = cleanSummary || '분석 결과 없음';
@@ -1271,8 +1279,12 @@ IMPORTANT: DO NOT include markdown code blocks (like \` \` \`json) in the respon
     if (panel) panel.style.display = 'block';
   }
 
-  // UI 렌더링: 관점/시사점 (코드 형식 기호 제거)
-  const cleanPerspectives = (result.perspectives || '').replace(/[`]/g, '').trim();
+  // UI 렌더링: 관점/시사점 (코드 형식 기호 및 마크다운 헤더 제거)
+  const cleanPerspectives = (result.perspectives || '')
+    .replace(/[`]/g, '')
+    .replace(/^#+\s*/gm, '') 
+    .replace(/^By\s+.*$/gim, '')
+    .trim();
   const perspectiveEl = document.getElementById('analysis-perspectives');
   if (perspectiveEl) {
     perspectiveEl.innerHTML = cleanPerspectives || '분석 결과 없음';
@@ -1290,14 +1302,16 @@ IMPORTANT: DO NOT include markdown code blocks (like \` \` \`json) in the respon
     sortedTimeline.forEach(item => {
       const el = document.createElement('div');
       el.className = 'timeline-item';
+      const cleanDetails = (item.details || '').replace(/[#*`]/g, '').trim();
+      const cleanLink = (item.link || '').replace(/[#*`]/g, '').trim();
       el.innerHTML = `
         <div class="timeline-dot"></div>
         <div class="timeline-content">
           <div class="timeline-date">${item.date}</div>
           <div class="timeline-title">${item.event}</div>
-          <div class="timeline-details">${item.details}</div>
-          <div class="timeline-link-box" style="margin-top:8px; padding:8px 12px; background:rgba(0,168,120,0.05); border-radius:6px; font-size:11px; color:var(--text2); border-left:2px solid var(--teal);">
-            <strong>🔗 현재와의 연결고리:</strong> ${item.link}
+          <div class="timeline-details">${cleanDetails}</div>
+          <div class="timeline-link-box">
+            <strong>🔗 현재와의 연결고리:</strong> <span>${cleanLink}</span>
           </div>
         </div>`;
       timelineContainer.appendChild(el);
@@ -1305,6 +1319,9 @@ IMPORTANT: DO NOT include markdown code blocks (like \` \` \`json) in the respon
     document.getElementById('analysis-timeline-panel').style.display = 'block';
   }
 
+  // 결과 객체 업데이트 및 반환 (세척된 버전 포함)
+  result.summary = cleanSummary;
+  result.perspectives = cleanPerspectives;
   return result;
 }
 
@@ -1468,6 +1485,9 @@ RECOMMENDATIONS: ${ar.factcheck?.recommendation || ''}
   };
 
   const todayStr = getTodayStr();
+  const userPress = document.getElementById('press-input')?.value.trim() || '동아일보';
+  const userAuthor = document.getElementById('author-input')?.value.trim() || '';
+
   const prompt = `You are an elite investigative journalist for a ${regionCfg.name} news agency.
 Today is ${todayStr}. All news must be written with today's perspective.
 
@@ -1482,31 +1502,41 @@ ${styleMap[state.articleStyle] || 'objective news'}
 - **CHRONOLOGICAL NARRATIVE**: This article MUST follow a temporal flow. Start with the 'past context' (from chronicle sources) to set the background, then seamlessly connect to the 'latest news' to show development, impact, and current status.
 - **"PAST vs. PRESENT" BRIDGE**: Use storytelling techniques to explain "how it started (Past)" and "how it progressed to today (Latest)". Ensure a logical causal link between them.
 - **LENGTH & DEPTH**: ${lengthInstr[state.articleStyle] || 'Provide a comprehensive article with sufficient length.'}
+- **NO HEADERS**: Do NOT use any Markdown symbols like '#' or '##' at the beginning of lines. Strictly use plain text for the title and subtitle.
+- **BYLINE FORMAT**: Strictly use the format: "${userPress} : ${userAuthor} 기자" on the third line. Do NOT use "By [Name]" or "바이라인:".
 
 [STRICT INSTRUCTIONS]:
 1. SOURCE ADHERENCE: Use ONLY the provided sources. Use 'past context' for background and 'latest news' for recent developments.
 2. MAIN TOPIC: Focus on the primary headlines from the sources.
-3. DATE LINE: Use today's date (${todayStr}).
+3. DATE LINE: Do NOT include today's date in the content area.
 4. ${state.articleStyle === '브리핑' ? 'STRUCTURE: Use a Bulleted List format as specified in the Style Guide.' : "STRUCTURE: Follow a 'History -> Current Issue -> Outlook' transition flow."}
 
-[FORMATTING]:
-- # [Headline]
-- ## [Sub-headline]
-- Byline: [Name] | ${todayStr}
+[FORMATTING SYSTEM]:
+- [Headline: Directly as the first line]
+- [Sub-headline: Directly as the second line]
+- ${userPress} : ${userAuthor} 기자
 - [Full Article Content: Merging Past and Present into a single cohesive story]
 
 ${langInstr}
 IMPORTANT: Make it crystal clear how past events influenced the current situation.`;
+
   try {
-    const result = await callGemini(prompt, 'gemini-2.0-flash');
+    let result = await callGemini(prompt, 'gemini-2.0-flash');
+    
+    // ✅ 강력한 후처리: 모든 # 기호 및 구버전 바이라인(By, 바이, 기자명 등) 제거
+    result = result
+      .replace(/^#+\s*/gm, '') // 줄 시작의 # 모두 제거
+      .replace(/^By\s+.*$/gim, '') // "By 김민지 | 2026.03.19" 등 전체 줄 제거 (대소문자 무시, 전역 매칭)
+      .replace(/^바이라인:.*$/gm, '') // "바이라인:" 제거
+      .replace(/^언론사:.*$/gm, '') // "언론사:" 제거
+      .trim();
+
     state.generatedArticle = result;
     document.getElementById('article-textarea').value = result;
     updateWordCount(); markStepComplete(2);
     showToast('success', '✅ 기사 생성 완료!');
-    // [UI 삭제] 기사 완료 배너 및 이미지 버튼 제거됨
     await autoGenPrompt();
 
-    // 저장 버튼들 활성화
     const htmlBtn = document.querySelector('.save-btn[onclick="exportArticle()"]');
     const txtBtn = document.querySelector('.save-btn[onclick="downloadArticle()"]');
     if (htmlBtn) htmlBtn.disabled = false;
@@ -1588,7 +1618,7 @@ function downloadArticle() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ATLAS 뉴스 기사</title>
+<title>동아일보 뉴스 기사</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -1612,12 +1642,12 @@ function downloadArticle() {
 <body>
 <div class="container">
   <div class="header">
-    <div class="brand">ATLAS INTELLIGENCE NEWS</div>
+    <div class="brand">동아일보 INTELLIGENCE NEWS</div>
     <div class="date">${dateStr}</div>
   </div>
   <div class="body">${htmlBody}</div>
   ${sourceHtml}
-  <div class="footer">ATLAS AI NEWSROOM — Powered by Intelligence Engine</div>
+  <div class="footer">동아일보 AI NEWSROOM — Powered by Intelligence Engine</div>
 </div>
 </body>
 </html>`;
@@ -1627,7 +1657,7 @@ function downloadArticle() {
   const blob = new Blob(['\ufeff', fullHtml], { type: 'application/msword;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `atlas_article_${Date.now()}.doc`;
+  a.download = `donga_article_${Date.now()}.doc`;
   a.click();
   showToast('success', '📰 기사가 워드 문서(.doc)로 저장되었습니다!');
 }
@@ -2091,29 +2121,29 @@ function updatePreview() {
   const regionNames = { KR: 'KOREA EDITION', US: 'UNITED STATES EDITION', GB: 'UNITED KINGDOM EDITION' };
 
   if (article && article.trim().length > 0) {
-    document.getElementById('np-region').textContent = regionNames[state.region] || state.region;
-    document.getElementById('np-date').textContent = getTodayStr();
-    document.getElementById('np-cat').textContent = 'NEWS';
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    document.getElementById('np-date').textContent = dateStr;
 
-    const titleMatch = article.match(/^#\s+(.+)/m);
-    const title = titleMatch ? titleMatch[1] : (state.topic || '');
+    const lines = article.split('\n').filter(l => l.trim().length > 0);
+    const title = lines[0] || (state.topic || '');
     document.getElementById('np-headline').textContent = title;
 
-    const subMatch = article.match(/^##\s+(.+)/m);
     const subEl = document.getElementById('np-subhead');
-    if (subMatch) { subEl.textContent = subMatch[1]; subEl.style.display = 'block'; }
-    else { subEl.style.display = 'none'; }
+    if (lines.length > 2 && !lines[1].includes(':')) { 
+      subEl.textContent = lines[1]; 
+      subEl.style.display = 'block'; 
+    } else { 
+      subEl.style.display = 'none'; 
+    }
 
-    const bylineMatch = article.match(/^(?:(?:\*\*)?Byline:|Byline:|\*\*|By\s)(.+)$/im);
-    document.getElementById('np-byline').textContent = bylineMatch
-      ? bylineMatch[0].replace(/[#*]/g, '').trim()
-      : `ATLAS · ${getTodayStr()}`;
   }
+
 
   // ✅ 기사 본문 추출 — 제목/부제/바이라인 제거 후 단락 구성
   const bodyText = article
-    .replace(/^#{1,6}\s+.+$/gm, '')           // # 헤딩 전체 제거
-    .replace(/^(?:Byline:|By\s).+$/gim, '')   // 바이라인 제거
+    .replace(/^#{1,6}\s*.+$/gm, '')           // # 헤딩 전체 제거
+    .replace(/^(?:.+ : .+ 기자|언론사:|바이라인:|기자:|Byline:|By\s).+$/gim, '')   // 바이라인 제거
     .replace(/\*\*/g, '')
     .replace(/\*/g, '')
     .replace(/`/g, '')
@@ -2248,7 +2278,6 @@ function updatePreview() {
         `<div style="flex:1;min-width:0;">` +
         `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">` +
         `<span style="font-size:11px;font-weight:700;color:var(--text2);">${a.source || ''}</span>` +
-        `<span class="card-badge">${a.date || ''}</span>` +
         (a.author ? `<span class="card-badge">${a.author}</span>` : '') +
         `</div>` +
         `<div style="font-size:12px;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:2px;">${a.title || ''}</div>` +
@@ -2288,14 +2317,14 @@ function updatePreview() {
           <div class="np-history-label">PAST</div>
           <div class="np-history-content">
             <div class="np-history-event">${earliest.title}</div>
-            <div class="np-history-desc">${earliest.date || '과거'} | ${earliest.source || ''} — 사건이 시작되거나 주목받기 시작한 초기 맥락입니다.</div>
+            <div class="np-history-desc">${earliest.source || ''} — 사건이 시작되거나 주목받기 시작한 초기 맥락입니다.</div>
           </div>
         </div>
         <div class="np-history-item">
           <div class="np-history-label">TODAY</div>
           <div class="np-history-content">
             <div class="np-history-event">${latest.title}</div>
-            <div class="np-history-desc">${latest.date || '현재'} | ${latest.source || ''} — 과거의 흐름이 이어져 현재 보도되고 있는 핵심 진행 상황입니다.</div>
+            <div class="np-history-desc">${latest.source || ''} — 과거의 흐름이 이어져 현재 보도되고 있는 핵심 진행 상황입니다.</div>
           </div>
         </div>
       </div>
@@ -2340,8 +2369,13 @@ function exportArticle() {
   const manualSource = document.getElementById('np-manual-source')?.value.trim() || '';
 
   const titleMatch = article.match(/^#\s+(.+)/m);
-  const title = titleMatch ? titleMatch[1] : (state.topic || '뉴스');
-  const bodyText = article.replace(/^#.+$/gm, '').replace(/^##.+$/gm, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').trim();
+  const title = titleMatch ? titleMatch[1] : (article.split('\n')[0] || state.topic || '뉴스');
+  const bodyText = article
+    .replace(/^#.+$/gm, '')
+    .replace(/^##.+$/gm, '')
+    .replace(/^(?:.+ : .+ 기자|언론사:|바이라인:|기자:|Byline:|By\s).+$/gim, '')
+    .replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '')
+    .trim();
   const paragraphs = bodyText.split(/\n\n+/).filter(p => p.trim().length > 10);
 
   // 기사 비율은 이미지에만 적용하고, 신문 배경 너비는 유동적이되 850px를 표준으로 함
@@ -2406,12 +2440,12 @@ h1 { font-family:'Pretendard', sans-serif; font-size:28px; font-weight:900; colo
 <body>
 <div class="newspaper">
   <div class="np-header">
-    <div class="np-masthead">ATLAS</div>
-    <div class="np-dateline"><span>${state.region} EDITION</span><span>${getTodayStr()}</span><span>NEWS</span></div>
+    <div class="np-masthead">동아일보</div>
+    <div class="np-dateline"><span>${state.region} EDITION</span><span></span><span>NEWS</span></div>
   </div>
   <div class="np-rule"></div>
   <h1>${title}</h1>
-  <div class="byline">ATLAS · ${getTodayStr()}</div>
+  <div class="byline" style="text-align:center;">${state.region} EDITION | NEWS</div>
   <div class="np-content-area">
     ${state.generatedImage ? `<div class="np-img"><img src="${state.generatedImage}" alt="${title}"/>${manualSource ? `<div class="np-caption">출처 : ${manualSource}</div>` : ''}</div>` : ''}
     <div class="body-text">${(bodyText.split(/\n+/).filter(p => p.trim().length > 0)).map(p => `<p>${p.trim()}</p>`).join('')}</div>
@@ -2446,7 +2480,7 @@ async function savePreviewAsImage() {
     const imgData = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = imgData;
-    a.download = `atlas_news_${Date.now()}.png`;
+    a.download = `donga_news_${Date.now()}.png`;
     a.click();
     showToast('success', '📸 신문 이미지 저장 완료!');
     return true;
@@ -2741,8 +2775,8 @@ function renderHistoryTimeline(events) {
                 <div class="timeline-date">${item.date}</div>
                 <div class="timeline-title">${item.event}</div>
                 <div class="timeline-details">${item.details}</div>
-                <div class="timeline-link-box">
-                    <strong>🔗 현재와의 연결고리:</strong> ${item.link}
+                <div class="timeline-link-box" style="margin-top:8px; padding:8px 12px; background:rgba(0,168,120,0.15); border-radius:6px; font-size:11.5px; color:#ffffff; border-left:2px solid var(--teal); line-height:1.6;">
+                    <strong style="color:var(--teal);">🔗 현재와의 연결고리:</strong> <span style="color:#ffffff;">${item.link}</span>
                 </div>
             </div>`;
     container.appendChild(el);
@@ -2782,13 +2816,36 @@ async function startChronicleResearch() {
     document.getElementById('chronicle-progress-text').textContent = text;
   };
 
-  addCL('info', `📡 [크로니클] 6개월 전 연대기 추적 시작: ${state.topic}`);
+  addCL('info', `📡 [크로니클] 스마트 연대기 추적 시작: ${state.topic}`);
   updateApiStatus('working');
-  setCP(20, '과거 데이터베이스 연결 중...');
+  setCP(10, 'AI가 타겟 기사 맥락 분석 중...');
 
   try {
-    // 💡 NewsService를 통해 6개월 이내의 과거 데이터를 가져옴
-    state.chronicleArticles = await NewsService.fetchChronicle(state.topic);
+    // 💡 [개선] 기사 한 개가 아닌 '선택한 모든 기사'들을 종합하여 맥락 추출 (최대 1500자)
+    let combinedContent = "";
+    if (state.selectedArticlesData && state.selectedArticlesData.length > 0) {
+      combinedContent = state.selectedArticlesData.map((a, i) => `[기사 ${i+1}] ${a.title}: ${a.summary}`).join('\n');
+      addCL('info', `🎯 선택된 기사 ${state.selectedArticlesData.length}건을 종합 분석 중...`);
+    }
+
+    if (!combinedContent) {
+      addCL('warn', '참조할 선택 기사가 없습니다. 검색 키워드로만 추적합니다.');
+      // 기존 방식 호환
+      state.chronicleArticles = await NewsService.fetchSmartChronicle({ 
+        title: state.topic, 
+        summary: state.topic, 
+        fullContent: state.topic 
+      });
+    } else {
+      // 종합된 컨텍스트를 넘겨서 뉴스 검색 (제목은 첫 기사 제목 활용)
+      const mockArticle = {
+        title: state.selectedArticlesData[0].title,
+        summary: combinedContent.substring(0, 1500),
+        fullContent: combinedContent.substring(0, 3000)
+      };
+      state.chronicleArticles = await NewsService.fetchSmartChronicle(mockArticle);
+    }
+
     setCP(80, '데이터 수집 및 동기화 완료...');
 
     if (state.chronicleArticles && state.chronicleArticles.length > 0) {

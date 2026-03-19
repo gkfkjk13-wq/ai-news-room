@@ -143,19 +143,53 @@ const NewsService = {
         return new Date().toISOString().split('T')[0];
     },
 
-    // 2. 6개월 미만 크로니클 수집 (Jina 활용)
-    async fetchChronicle(topic) {
-        const apiKey = CONFIG.API_KEY.trim();
-        if (!apiKey) {
-            throw new Error('Jina API Key가 없습니다.');
+    // [추가] AI에게 기사 분석을 통해 키워드 3개 추출 요청
+    async getAIKeywords(content) {
+        try {
+            const response = await fetch('/api/generate-queries', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ articleContent: content })
+            });
+            if (!response.ok) return [];
+            const data = await response.json();
+            return data.queries || []; // ["과거 부상", "이전 경기", "특정 사건"]
+        } catch (e) {
+            console.error("AI 키워드 추출 실패:", e);
+            return [];
         }
+    },
 
-        // 크로니클에서도 동일한 언론사 필터 적용하지만, 제외 사이트 쿼리는 최소화
+    // 2. 스마트 크로니클 수집 (키워드 3종 기반 6개월 전 추적)
+    async fetchSmartChronicle(selectedArticle) {
+        const apiKey = CONFIG.API_KEY.trim();
+        if (!apiKey) throw new Error('Jina API Key가 없습니다.');
+
+        // 1단계: AI가 기사 내용(앞부분 1200자)으로 키워드 3개 추출
+        const contentForAi = (selectedArticle.fullContent || selectedArticle.summary || "").substring(0, 1200);
+        const keywords = await this.getAIKeywords(contentForAi);
+        console.log("✅ [스마트 크로니클] 추출된 키워드:", keywords);
+
+        // 키워드가 없으면 기존 토픽으로 대체
+        const searchTopics = keywords.length > 0 ? keywords : [selectedArticle.title.substring(0, 30)];
+
+        // 2단계: 추출된 3개 키워드로 각각 과거 6개월 뉴스 검색
+        const searchPromises = searchTopics.map(keyword => this._fetchChronicleSingle(keyword, apiKey));
+        const allResults = await Promise.all(searchPromises);
+
+        // 3단계: 결과 통합 및 중복 제거
+        const mergedResults = [].concat(...allResults);
+        const uniqueResults = Array.from(new Map(mergedResults.map(item => [item.url, item])).values());
+        
+        return uniqueResults.sort((a,b) => new Date(b.date) - new Date(a.date));
+    },
+
+    // 개별 키워드에 대한 6개월 검색 내부함수
+    async _fetchChronicleSingle(keyword, apiKey) {
         const siteQuery = ` (${this.trustedSites.map(s => `site:${s}`).join(' OR ')})`;
         const coreExclude = ['youtube.com', 'blog.naver.com', 'namu.wiki'];
         const excludeQuery = ` ${coreExclude.map(s => `-site:${s}`).join(' ')}`;
 
-        // 크로니클 기간 설정: 이용자 사용일 기준 2주 전 ~ 최대 6개월 전
         const now = new Date();
         const sixMonthsAgo = new Date(now); sixMonthsAgo.setMonth(now.getMonth() - 6);
         const twoWeeksAgo = new Date(now); twoWeeksAgo.setDate(now.getDate() - 14);
@@ -163,41 +197,30 @@ const NewsService = {
         const beforeDate = twoWeeksAgo.toISOString().split('T')[0];
         const afterDate = sixMonthsAgo.toISOString().split('T')[0];
 
-        const query = `${topic} after:${afterDate} before:${beforeDate}${siteQuery}${excludeQuery}`;
+        const query = `${keyword} after:${afterDate} before:${beforeDate}${siteQuery}${excludeQuery}`;
         const url = `https://s.jina.ai/${encodeURIComponent(query)}`;
 
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Accept': 'application/json'
-            }
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Accept': 'application/json'
+                }
+            });
 
-        if (!response.ok) return [];
-        const data = await response.json();
-        if (!data.data) return [];
+            if (!response.ok) return [];
+            const data = await response.json();
+            if (!data.data) return [];
 
-        // 크로니클에서도 동일한 강제 차단 필터 적용
-        const validChronicle = data.data.filter(item => {
-            try {
-                const hostname = new URL(item.url).hostname;
-                const isTrusted = this.trustedSites.some(site => hostname.includes(site));
-                const isExcluded = this.excludeSites.some(site => hostname.includes(site));
-
-                // 주제 관련성 체크
-                const keywords = topic.toLowerCase().split(' ').filter(k => k.length >= 1);
-                const titleLower = item.title.toLowerCase();
-                const descLower = (item.description || "").toLowerCase();
-                const isRelated = keywords.some(k => titleLower.includes(k) || descLower.includes(k));
-
-                return isTrusted && !isExcluded && isRelated;
-            } catch (e) { return false; }
-        });
-
-        return validChronicle.slice(0, 5).map((item, idx) => {
-            return {
-                id: 'chronicle_' + idx,
+            return data.data.filter(item => {
+                try {
+                    const hostname = new URL(item.url).hostname;
+                    return this.trustedSites.some(site => hostname.includes(site)) && 
+                           !this.excludeSites.some(site => hostname.includes(site));
+                } catch (e) { return false; }
+            }).slice(0, 3).map((item, idx) => ({
+                id: 'chronicle_' + Math.random().toString(36).substr(2, 5),
                 title: item.title,
                 url: item.url,
                 source: new URL(item.url).hostname,
@@ -205,8 +228,11 @@ const NewsService = {
                 fullContent: item.content || '',
                 date: this._extractDate(item),
                 relevance: 9
-            };
-        });
+            }));
+        } catch (e) {
+            console.error(`[Search Error] ${keyword}:`, e);
+            return [];
+        }
     },
 
     // 3. [핵심] 최신 뉴스와 크로니클의 "인과관계 연결" (Gemini 활용)

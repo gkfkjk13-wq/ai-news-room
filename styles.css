@@ -1311,14 +1311,15 @@ body {
 .np-dateline {
     font-family: var(--font-body);
     font-weight: 500;
-    font-size: 10px;
-    letter-spacing: 0.3em;
+    font-size: 11px;
+    letter-spacing: 0.15em;
     color: #6b5d4f;
-    margin-top: 6px;
+    margin-top: 8px;
     text-transform: uppercase;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
+    text-align: center;
 }
 
 .np-rule-thick {
@@ -2017,22 +2018,23 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .timeline-details {
     font-size: 13.5px;
-    color: #ccc;
+    color: #ffffff;
     line-height: 1.7;
     margin-bottom: 12px;
 }
-
+ 
 .timeline-link-box {
+    margin-top: 10px;
     font-size: 12.5px;
-    color: var(--teal);
-    background: rgba(0, 242, 234, 0.05);
+    color: #ffffff; /* Use solid white for clarity */
+    background: rgba(0, 168, 120, 0.15);
     padding: 10px 14px;
     border-radius: 6px;
     border-left: 2px solid var(--teal);
 }
-
+ 
 .timeline-link-box strong {
-    color: #fff;
+    color: #ffffff; /* Solid white for label */
     margin-right: 5px;
 }
 

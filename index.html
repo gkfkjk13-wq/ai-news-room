@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ATLAS — 대한민국 뉴스 인텔리전스</title>
+  <title>동아일보 — 대한민국 뉴스 인텔리전스</title>
   <link rel="stylesheet" href="styles.css">
   <!-- html2canvas: 화면을 이미지로 저장하기 위한 라이브러리 추가 -->
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
@@ -299,7 +299,7 @@
           <div class="panel" id="analysis-summary-panel" style="display:none;">
             <div class="panel-title">📋 통합 요약 — Integrated Summary</div>
             <div id="analysis-summary"
-              style="font-size:13px; color:var(--text); line-height:1.8; background:var(--bg4); border-radius:8px; padding:16px; border-left:3px solid var(--teal);">
+              style="font-size:13px; color:#ffffff; line-height:1.8; background:#1a1a1a; border-radius:8px; padding:16px; border-left:3px solid var(--teal);">
             </div>
           </div>
 
@@ -364,6 +364,21 @@
               <span id="write-sources-count" class="token-badge">0건</span>
             </div>
             <div id="write-sources-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+
+          <!-- [NEW] 바이라인 설정 패널 -->
+          <div class="panel">
+            <div class="panel-title">기사 바이라인 설정</div>
+            <div style="display:flex; gap:12px;">
+              <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text3); margin-bottom:6px;">언론사 (Press)</div>
+                <input type="text" id="press-input" placeholder="예: ATLAS" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg3); font-size:13px; outline:none; color:var(--text);">
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:11px; color:var(--text3); margin-bottom:6px;">기자 명 (Reporter Name)</div>
+                <input type="text" id="author-input" placeholder="예: 김민지" style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg3); font-size:13px; outline:none; color:var(--text);">
+              </div>
+            </div>
           </div>
 
           <div class="panel">
@@ -550,17 +565,14 @@
         <div class="main-scroll">
           <div class="newspaper-wrap" id="newspaper-preview">
             <div class="np-header">
-              <div class="np-masthead">ATLAS</div>
+              <div class="np-masthead">동아일보</div>
               <div class="np-dateline">
-                <span id="np-region"></span>
                 <span id="np-date"></span>
-                <span id="np-cat"></span>
               </div>
             </div>
             <div class="np-rule-thick"></div>
             <div class="np-headline" id="np-headline"></div>
             <div class="np-subhead" id="np-subhead"></div>
-            <div class="np-byline" id="np-byline"></div>
             <div class="np-rule-double"></div>
             <div class="np-content-area" id="np-content-area">
               <div class="np-image-frame" id="np-image-frame" style="display:none;">
